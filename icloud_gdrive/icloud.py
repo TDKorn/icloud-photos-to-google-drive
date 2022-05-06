@@ -1,7 +1,17 @@
+import os
+import sys
 import json
+import logging
 import datetime
+
 from urllib.parse import urlencode
+
+from icloudpd import constants
+from icloudpd.download import download_media
+from icloudpd.authentication import authenticate, TwoStepAuthRequiredError, setup_logger
 from pyicloud_ipd.services.photos import PhotoAlbum, PhotoAsset
+
+logger = setup_logger()
 
 
 class FilterAlbum(PhotoAlbum):
@@ -9,7 +19,6 @@ class FilterAlbum(PhotoAlbum):
     Wrapper class for PhotoAlbum with additional methods to filter photos by date range
     Methods adapted from @magus0219 via https://github.com/picklepete/pyicloud/pull/276
     """
-
     def __init__(self, album: PhotoAlbum):
         super().__init__(
             album.service,
@@ -332,3 +341,5 @@ class FilterAlbum(PhotoAlbum):
                         break
             else:
                 break  # pragma: no cove
+
+
