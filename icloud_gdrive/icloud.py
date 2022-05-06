@@ -343,3 +343,44 @@ class FilterAlbum(PhotoAlbum):
                 break  # pragma: no cove
 
 
+class iCloudScraper:
+
+    def __init__(self, **kwargs):
+        self.api = None
+        self.cookie_dir = kwargs.get('cookie_dir','~/.pyicloud')
+        self.download_dir = os.path.normpath(kwargs.get('download_dir', './Photos'))
+        self.folder_structure = kwargs.get('folder_structure', '{:%Y/%m}')
+
+    def login(self, username, password):
+        logger.info('Authenticating...')
+        try:
+            self.api = authenticate(
+                username=username,
+                password=password,
+                cookie_directory=self.cookie_dir,
+                raise_error_on_2sa=False,  # For now
+                client_id=os.environ.get("CLIENT_ID")
+            )
+            logger.info(
+                'Logged into {}'.format(self.api)
+            )
+            return self
+        except TwoStepAuthRequiredError as e:
+            logger.error(e)
+            sys.exit(1)
+
+    @property
+    def albums(self):
+        if self.api:
+            return self.api.photos.albums
+
+    def get_album(self, album_name):
+        if album := self.albums.get(album_name, None):
+            return FilterAlbum(album)
+        else:
+            for name, album in self.albums.items():
+                if name.lower() == album_name.lower():
+                    return FilterAlbum(album)
+        logger.error(f'No Album found for {album_name}')
+        return None
+
