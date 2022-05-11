@@ -384,3 +384,44 @@ class iCloudScraper:
         logger.error(f'No Album found for {album_name}')
         return None
 
+    def delete_photo(self, photo: PhotoAsset):
+        """Adapted from @jacobpgallagher via https://github.com/picklepete/pyicloud/pull/354/"""
+        record_name = photo._asset_record['recordName']
+        record_type = photo._asset_record['recordType']
+        record_change_tag = photo._master_record['recordChangeTag']
+
+        json_data = {
+            'operations': {
+                'operationType': 'update',
+                'record': {
+                    'recordType': record_type,
+                    'recordName': record_name,
+                    'recordChangeTag': record_change_tag,  # '3t',
+                    'fields': {
+                        'isDeleted': {
+                            'value': 1,
+                        },
+                    },
+                },
+            },
+            'zoneID': {
+                'zoneName': 'PrimarySync',
+                'zoneType': 'REGULAR_CUSTOM_ZONE'
+            },
+            'atomic': True,
+        }
+        endpoint = self.api.photos._service_endpoint
+        url = f'{endpoint}/records/modify'
+
+        response = self.api.session.post(
+            url=url,
+            json=json_data,
+            params=self.api.params
+        )
+        if response.ok:
+            logger.info(f'Deleted {photo.filename} from iCloud')
+            return True
+        else:
+            logger.error(f'Failed to delete {photo.filename} from iCloud')
+            print(f'Failed to delete {photo.filename} from iCloud')
+            return False
