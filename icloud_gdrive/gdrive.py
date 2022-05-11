@@ -37,10 +37,10 @@ class gDrive:
     def map_folders(self, root):
         """From a root directory, recursively map the ids of its subdirectories"""
         folders = self.get_folder_contents(root['id'])['folders']
-        if not folders:  # No subdirectories to map
+        if not folders:     # No subdirectories to map
             return
-
-        for folder in folders:  # Recursively map the subdirectories to their folder ids
+        for folder in folders:
+            # Recursively map the subdirectories to their folder ids
             name, id = folder['title'], folder['id']
             try:
                 # If it's a month folder, convert month name to integer value
@@ -48,12 +48,9 @@ class gDrive:
             except ValueError:
                 month = None
 
-            if month:  # Month folder dict key format is "YYYY/mm", so need name of parent (year) folder
-                year_dir = self.drive.CreateFile(
-                    {
-                        'id': folder['parents'][0]['id']
-                    }
-                )
+            if month:
+                # Month folder dict key format is "YYYY/mm", need the name of parent(year) folder
+                year_dir = self.drive.CreateFile({'id': folder['parents'][0]['id']})
                 year_dir.FetchMetadata()
                 year = year_dir['title']
                 key = f'{year}/{month}'
@@ -178,5 +175,13 @@ class gDrive:
         return self.drive.GetAbout()
 
     @property
-    def available(self):
-        return int(self.about['quotaBytesTotal']) - int(self.about['quotaBytesUsed']) - int(self.about['quotaBytesUsedInTrash'])
+    def total_storage(self):
+        return int(self.about['quotaBytesTotal'])
+
+    @property
+    def used_storage(self):
+        return int(self.about['quotaBytesUsed']) + int(self.about['quotaBytesUsedInTrash'])
+
+    @property
+    def available_storage(self):
+        return self.total_storage - self.used_storage
