@@ -384,7 +384,7 @@ class iCloudScraper:
         logger.error(f'No Album found for {album_name}')
         return None
 
-    def delete_photo(self, photo: PhotoAsset):
+    def delete_photo(self, photo: PhotoAsset, permanent=False):
         """Adapted from @jacobpgallagher via https://github.com/picklepete/pyicloud/pull/354/"""
         record_name = photo._asset_record['recordName']
         record_type = photo._asset_record['recordType']
@@ -400,6 +400,9 @@ class iCloudScraper:
                     'fields': {
                         'isDeleted': {
                             'value': 1,
+                        },
+                        'isExpunged': {
+                            'value': int(permanent),
                         },
                     },
                 },
@@ -425,3 +428,16 @@ class iCloudScraper:
             logger.error(f'Failed to delete {photo.filename} from iCloud')
             print(f'Failed to delete {photo.filename} from iCloud')
             return False
+
+    def clear_deleted_photos(self):
+        """Permanently deletes photos from the Recently Deleted iCloud folder"""
+        album = self.get_album('Recently Deleted')
+        photos = album.fetch_photos()
+        deleted_count = 0
+
+        for photo in photos:
+            self.delete_photo(photo, permanent=True)
+            deleted_count += 1
+
+        logger.info(f"Permanently deleted {deleted_count} photos from iCloud")
+        return True
