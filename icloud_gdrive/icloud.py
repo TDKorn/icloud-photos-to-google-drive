@@ -20,6 +20,7 @@ class FilterAlbum(PhotoAlbum):
     Methods adapted from @magus0219 via https://github.com/picklepete/pyicloud/pull/276
     """
     def __init__(self, album: PhotoAlbum):
+        album.direction = 'DESCENDING'
         super().__init__(
             album.service,
             album.name,
@@ -347,7 +348,7 @@ class iCloudScraper:
 
     def __init__(self, **kwargs):
         self.api = None
-        self.cookie_dir = kwargs.get('cookie_dir','~/.pyicloud')
+        self.cookie_dir = kwargs.get('cookie_dir', '~/.pyicloud')
         self.download_dir = os.path.normpath(kwargs.get('download_dir', './Photos'))
         self.folder_structure = kwargs.get('folder_structure', '{:%Y/%m}')
 
@@ -361,12 +362,10 @@ class iCloudScraper:
                 raise_error_on_2sa=False,  # For now
                 client_id=os.environ.get("CLIENT_ID")
             )
-            logger.info(
-                'Logged into {}'.format(self.api)
-            )
+            logger.info(f'Logged into {self.api}')
             return self
         except TwoStepAuthRequiredError as e:
-            logger.error(e)
+            logger.error(str(e))
             sys.exit(1)
 
     @property
