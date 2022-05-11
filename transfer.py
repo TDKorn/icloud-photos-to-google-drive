@@ -5,8 +5,7 @@ import datetime
 from tzlocal import get_localzone
 from icloudpd.download import download_media
 
-from icloud_gdrive.gdrive import gDrive
-from icloud_gdrive import iCloudScraper, logger
+from pycloud import gDrive, iCloudScraper, logger
 
 USERNAME = None
 PASSWORD = None
@@ -36,12 +35,6 @@ while True:
     except KeyboardInterrupt as e:
         logger.info('Exiting script')
         sys.exit(0)
-
-# tqdm_kwargs = {
-#     "total": len(photos),
-#     "ascii": True
-# }
-# logger.set_tqdm(tqdm(photos, **tqdm_kwargs))
 
 photos = album.fetch_photos(date_start=FROM, date_end=TO)
 logger.info(f'Fetched photos from {album.name}')
