@@ -19,6 +19,7 @@ class FilterAlbum(PhotoAlbum):
     Wrapper class for PhotoAlbum with additional methods to filter photos by date range
     Methods adapted from @magus0219 via https://github.com/picklepete/pyicloud/pull/276
     """
+
     def __init__(self, album: PhotoAlbum):
         album.direction = 'DESCENDING'
         super().__init__(
