@@ -12,6 +12,7 @@ class gDrive:
     def __init__(self, drive=None):
         self.drive = drive
         self.folders = {}
+        self._total_storage = None
 
         if not self.drive:
             self.drive = self.get_drive()
@@ -176,7 +177,10 @@ class gDrive:
 
     @property
     def total_storage(self):
-        return int(self.about['quotaBytesTotal'])
+        if not self._total_storage:
+            # Total storage should be constant, store value after retrieving
+            self._total_storage = int(self.about['quotaBytesTotal'])
+        return self._total_storage
 
     @property
     def used_storage(self):
