@@ -45,6 +45,10 @@ download_dir = os.path.join(cloud.download_dir,
 
 success, failed = [], []
 for photo in photos:
+    if photo.size > drive.available_storage:
+        # If not enough space, go to the next photo/video as it might be small enough
+        continue
+
     try:
         created_date = photo.created.astimezone(get_localzone())
     except (ValueError, OSError):

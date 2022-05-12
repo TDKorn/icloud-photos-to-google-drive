@@ -38,8 +38,9 @@ class gDrive:
     def map_folders(self, root):
         """From a root directory, recursively map the ids of its subdirectories"""
         folders = self.get_folder_contents(root['id'])['folders']
-        if not folders:     # No subdirectories to map
+        if not folders:  # No subdirectories to map
             return
+
         for folder in folders:
             # Recursively map the subdirectories to their folder ids
             name, id = folder['title'], folder['id']
@@ -49,15 +50,15 @@ class gDrive:
             except ValueError:
                 month = None
 
-            if month:
-                # Month folder dict key format is "YYYY/mm", need the name of parent(year) folder
+            if month:  # Month folder dict key format is "YYYY/mm", need the name of parent(year) folder
                 year_dir = self.drive.CreateFile({'id': folder['parents'][0]['id']})
                 year_dir.FetchMetadata()
                 year = year_dir['title']
                 key = f'{year}/{month}'
-            else:
-                # If it's not a month folder, the dict key is just the folder name
+
+            else:  # Any other folder's dict key is just the folder name
                 key = name
+
             self.folders[key] = id
             self.map_folders(folder)
 
@@ -67,7 +68,8 @@ class gDrive:
             return self.folders[date]
 
         year, month = date.split('/')
-        if year not in self.folders:  # Both year and month folders need to be made
+        if year not in self.folders:
+            # Both year and month folders need to be made
             year_dir = self.new_folder(
                 name=year,
                 parent_id=self.upload_dir['id']
@@ -75,7 +77,7 @@ class gDrive:
             if not year_dir.uploaded:
                 raise RuntimeError('Unable to create folder %s' % year)
 
-        # Year folder must exist at this point. Still need to make month folder though
+        # Year folder exists. Creating month folder now
         month_name = calendar.month_name[int(month.lstrip('0'))]
         month_dir = self.new_folder(
             name=month_name,
