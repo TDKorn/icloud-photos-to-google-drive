@@ -1,10 +1,33 @@
 import logging
 
-import icloud_gdrive
+from pycloud import *
 
 logging.basicConfig(filename='pycloud.log', level=logging.DEBUG)
 
 f"|[iCloud]|: U: 800MB | 38 Files | 193.4GB/200GB ||--||--|| Delete photo.filename ]|"
+
+class pycloudLogger:
+
+    def __init__(self, obj: object):
+        self.obj = obj
+
+        if isinstance(obj, iCloudScraper):
+            self.name = 'iCloud'
+        elif isinstance(obj, gDrive):
+            self.name = 'gDrive'
+        else:
+            self.name = str(obj.__class__).split()[1].strip('>\'')
+
+    def format_msg(self, msg):
+        msg = "|[{name}]|: {used_storage}/{total_storage} ||--||--|| {message} ]|".format(
+            name=self.name,
+            used_storage=self.obj.used_storage,
+            total_storage=self.obj.total_storage,
+            message=msg
+        )
+
+        self.logger = self.setup_logger()
+
 
 class gDriveLogger:
 
