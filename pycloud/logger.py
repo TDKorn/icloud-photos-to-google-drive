@@ -39,25 +39,18 @@ class PyCloudLogger:
         return logger
 
     def format_msg(self, msg):
+        new_msg = "|[{name}]|:{tabs}{message}".format(
+            name=self.name,
+            tabs='\t\t\t',
+            message=msg
+        )
         if hasattr(self.obj, 'used_storage') and hasattr(self.obj, 'total_storage'):
             # Google Drive API provides information about storage usage
-            msg = "|[{name}]|: {used_storage}/{total_storage}GB ||--||     {message}        ]|".format(
-                name=self.name,
-                used_storage=round(
-                    convert_bytes(self.obj.used_storage, 'GB'), 2
-                ),
-                total_storage=round(
-                    convert_bytes(self.obj.total_storage, 'GB'), 2
-                ),
-                message=msg
+            new_msg += "\t  ||  [{used:.2f}/{total:.2f}GB] ".format(
+                used = convert_bytes(self.obj.used_storage, 'GB'),
+                total = convert_bytes(self.obj.total_storage, 'GB')
             )
-        else:
-            # Ideally will figure out how to get storage info from iCloud at some point
-            msg = "|[{name}]|:      {message}       ]|".format(
-                name=self.name,
-                message=msg
-            )
-        return msg
+        return new_msg
 
     def info(self, msg):
         return self.logger.info(

@@ -5,7 +5,7 @@ import datetime
 from tzlocal import get_localzone
 from icloudpd.download import download_media
 
-from pycloud import gDrive, iCloudScraper, logger
+from pycloud import gDrive, iCloud, PyCloudLogger
 
 USERNAME = None
 PASSWORD = None
@@ -17,7 +17,7 @@ FROM = datetime.date(2020, 1, 1)
 TO = datetime.date(2020, 2, 1)
 
 drive = gDrive()
-cloud = iCloudScraper(
+cloud = iCloud(
     cookie_dir=COOKIE_DIR,
     download_dir=DOWNLOAD_DIR,
     folder_structure=FOLDER_STRUCTURE).login(
@@ -25,19 +25,21 @@ cloud = iCloudScraper(
     PASSWORD
 )
 
+log = PyCloudLogger(name='transfer.py')
+
 while True:
     try:
         # album = cloud.get_album('All Photos')
         album = cloud.get_album(input('Enter an album name:\n>'))
         if album:
-            logger.info(f'Retrieved album {album.name}')
+            cloud.info(f'Retrieved album {album.name}')
             break
     except KeyboardInterrupt as e:
-        logger.info('Exiting script')
+        log.info('Exiting script')
         sys.exit(0)
 
 photos = album.fetch_photos(date_start=FROM, date_end=TO)
-logger.info(f'Fetched photos from {album.name}')
+cloud.info(f'Fetched photos from {album.name}')
 
 # All directories will be made by the icloudpd.download.download_media() function
 download_dir = os.path.join(cloud.download_dir,
@@ -52,7 +54,7 @@ for photo in photos:
     try:
         created_date = photo.created.astimezone(get_localzone())
     except (ValueError, OSError):
-        logger.error(
+        log.error(
             "Could not convert photo created date to local timezone (%s)" % photo.created)
         created_date = photo.created
 
@@ -66,20 +68,18 @@ for photo in photos:
         size='original'
     )
     if downloaded:
-        logger.info(
-            "Successfully downloaded %s to local folder %s",
-            photo.filename,
-            date_path
-        )
+        cloud.info("Downloaded {} to {}".format(
+                photo.filename,
+                date_path))
     else:
-        logger.error(f"Failed to download photo {photo.filename}")
+        log.error(f"Failed to download photo {photo.filename} from iCloud")
         failed.append(photo)
         continue
 
     upload_id = drive.get_date_folder(date_path)
     file = drive.add_file(download_path, parent_id=upload_id)
     if not file.uploaded:
-        logger.error(
+        log.error(
             f'Failed to upload photo {photo.filename} to Google Drive folder {date_path}'
         )
         failed.append(photo)
@@ -88,7 +88,7 @@ for photo in photos:
         continue
 
     else:
-        logger.info(f'Uploaded {photo.filename} to Google Drive folder {date_path}')
+        drive.info(f'Uploaded {photo.filename} to folder {date_path}')
         file = None
         os.remove(download_path)
 
@@ -96,15 +96,12 @@ for photo in photos:
     if not deleted:
         failed.append(photo)
 
-logger.info(f'Finish transferring photos from album {album.name}')
+log.info(f'Finish transferring photos from album {album.name}')
 if failed:
-    logger.info('Writing failed log...')
-    with open(os.path.join(download_dir, 'Failed Transfers.txt'), 'w') as f:
-        f.write(
-            '\n'.join(photo.id for photo in failed),
-        )
+    for content in failed:
+        log.debug('Failed: %s' % content.id)
 
-logger.info('Exiting script...')
+log.info('Exiting script...')
 sys.exit(0)
 
 
