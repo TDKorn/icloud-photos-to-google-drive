@@ -1,17 +1,23 @@
-import os
-import sys
 import json
-import logging
 import datetime
 
 from urllib.parse import urlencode
-
-from icloudpd import constants
-from icloudpd.download import download_media
-from icloudpd.authentication import authenticate, TwoStepAuthRequiredError, setup_logger
 from pyicloud_ipd.services.photos import PhotoAlbum, PhotoAsset
 
-logger = setup_logger()
+
+def convert_bytes(bytes, format='MB'):
+    formats = {
+        'B': 0,
+        'KB': 1,
+        'MB': 2,
+        'GB': 3,
+        'TB': 4
+    }
+    if format not in formats:
+        raise ValueError('Not a valid format. Valid formats: {}'.format([f for f in formats]))
+    else:
+        pwr = formats[format]
+        return bytes / (1024 ** pwr)
 
 
 class FilterAlbum(PhotoAlbum):
@@ -343,101 +349,3 @@ class FilterAlbum(PhotoAlbum):
                         break
             else:
                 break  # pragma: no cove
-
-
-class iCloudScraper:
-
-    def __init__(self, **kwargs):
-        self.api = None
-        self.cookie_dir = kwargs.get('cookie_dir', '~/.pyicloud')
-        self.download_dir = os.path.normpath(kwargs.get('download_dir', './Photos'))
-        self.folder_structure = kwargs.get('folder_structure', '{:%Y/%m}')
-
-    def login(self, username, password):
-        logger.info('Authenticating...')
-        try:
-            self.api = authenticate(
-                username=username,
-                password=password,
-                cookie_directory=self.cookie_dir,
-                raise_error_on_2sa=False,  # For now
-                client_id=os.environ.get("CLIENT_ID")
-            )
-            logger.info(f'Logged into {self.api}')
-            return self
-        except TwoStepAuthRequiredError as e:
-            logger.error(str(e))
-            sys.exit(1)
-
-    @property
-    def albums(self):
-        if self.api:
-            return self.api.photos.albums
-
-    def get_album(self, album_name):
-        if album := self.albums.get(album_name, None):
-            return FilterAlbum(album)
-        else:
-            for name, album in self.albums.items():
-                if name.lower() == album_name.lower():
-                    return FilterAlbum(album)
-        logger.error(f'No Album found for {album_name}')
-        return None
-
-    def delete_photo(self, photo: PhotoAsset, permanent=False):
-        """Adapted from @jacobpgallagher via https://github.com/picklepete/pyicloud/pull/354/"""
-        record_name = photo._asset_record['recordName']
-        record_type = photo._asset_record['recordType']
-        record_change_tag = photo._master_record['recordChangeTag']
-
-        json_data = {
-            'operations': {
-                'operationType': 'update',
-                'record': {
-                    'recordType': record_type,
-                    'recordName': record_name,
-                    'recordChangeTag': record_change_tag,  # '3t',
-                    'fields': {
-                        'isDeleted': {
-                            'value': 1,
-                        },
-                        'isExpunged': {
-                            'value': int(permanent),
-                        },
-                    },
-                },
-            },
-            'zoneID': {
-                'zoneName': 'PrimarySync',
-                'zoneType': 'REGULAR_CUSTOM_ZONE'
-            },
-            'atomic': True,
-        }
-        endpoint = self.api.photos._service_endpoint
-        url = f'{endpoint}/records/modify'
-
-        response = self.api.session.post(
-            url=url,
-            json=json_data,
-            params=self.api.params
-        )
-        if response.ok:
-            logger.info(f'Deleted {photo.filename} from iCloud')
-            return True
-        else:
-            logger.error(f'Failed to delete {photo.filename} from iCloud')
-            print(f'Failed to delete {photo.filename} from iCloud')
-            return False
-
-    def clear_deleted_photos(self):
-        """Permanently deletes photos from the Recently Deleted iCloud folder"""
-        album = self.get_album('Recently Deleted')
-        photos = album.fetch_photos()
-        deleted_count = 0
-
-        for photo in photos:
-            self.delete_photo(photo, permanent=True)
-            deleted_count += 1
-
-        logger.info(f"Permanently deleted {deleted_count} photos from iCloud")
-        return True
